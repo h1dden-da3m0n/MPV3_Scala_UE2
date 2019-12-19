@@ -3,22 +3,25 @@ package mpv.exercises.actors.communication
 import akka.actor.{Actor, ActorRef, PoisonPill, Props, Terminated}
 
 import scala.collection.mutable
-import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration._
 import scala.util.Random
 
 object MsgSender {
+
+  def props(retryCont: Int, msgCnt: Int = 8, maxReceiptTimout: FiniteDuration = 250.millis): Props =
+    Props(new MsgSender(retryCont, msgCnt, maxReceiptTimout))
 
   case class MsgStatusCheck()
 
 }
 
-class MsgSender(msgCnt: Int, maxReceiptTimout: FiniteDuration) extends Actor {
+class MsgSender(retryCont: Int, msgCnt: Int, maxReceiptTimout: FiniteDuration) extends Actor {
 
   import MsgReceiver._
   import MsgSender._
   import context.dispatcher
 
-  private val failProbability = 0.4
+  private val failProbability = 0.7
   private val msgReceiver: ActorRef = context.actorOf(Props[MsgReceiver], "MsgReceiver")
   private val sentMassages = mutable.Set.empty[SimpleMessage]
   println(s"[${self.path.name}]: CREATED! Start sending ...")

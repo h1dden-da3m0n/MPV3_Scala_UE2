@@ -3,6 +3,7 @@ package mpv.exercises.actors.communication
 import akka.actor.Actor
 import akka.http.javadsl.model.DateTime
 
+import scala.collection.mutable
 import scala.util.Random
 
 object MsgReceiver {
@@ -17,13 +18,17 @@ class MsgReceiver extends Actor {
 
   import MsgReceiver._
 
-  private val failProbability = 0.4
+  private val failProbability = 0.7
+  private val handledMsgIds = mutable.SortedSet.empty[Long]
   println(s"[${self.path.name}]: CREATED! Becoming sentient ...")
 
   override def receive: Receive = {
     case msg: SimpleMessage =>
       if (Random.nextDouble() <= failProbability) {
-        println(s"[${self.path.name}]: RECIEVED @ ${DateTime.now()} {id: ${msg.id}, msg: '${msg.msg}'}")
+        if (!handledMsgIds.contains(msg.id)) {
+          println(s"[${self.path.name}]: RECIEVED @ ${DateTime.now()} {id: ${msg.id}, msg: '${msg.msg}'}")
+          handledMsgIds += msg.id
+        }
         sender ! SimpleReceipt(msg)
       }
   }
