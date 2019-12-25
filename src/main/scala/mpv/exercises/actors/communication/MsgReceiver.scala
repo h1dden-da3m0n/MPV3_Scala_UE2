@@ -18,13 +18,13 @@ class MsgReceiver extends Actor {
 
   import MsgReceiver._
 
-  private val failProbability = 0.7
+  private val successProbability = 0.7
   private val handledMsgIds = mutable.SortedSet.empty[Long]
   println(s"[${self.path.name}]: CREATED! Becoming sentient ...")
 
   override def receive: Receive = {
     case msg: SimpleMessage =>
-      if (Random.nextDouble() <= failProbability) {
+      if (Random.nextDouble() <= successProbability) {
         if (!handledMsgIds.contains(msg.id)) {
           println(s"[${self.path.name}]: RECIEVED @ ${DateTime.now()} {id: ${msg.id}, msg: '${msg.msg}'}")
           handledMsgIds += msg.id
