@@ -1,8 +1,7 @@
 package mpv.exercises.actors.stream
 
 import akka.actor.{Actor, Props}
-import akka.stream.scaladsl.{FileIO, Flow, Source}
-import akka.util.ByteString
+import akka.stream.scaladsl.{FileIO, Source}
 
 import scala.collection.mutable
 import scala.concurrent.duration._
@@ -27,23 +26,21 @@ object BufferedStorageActor {
 class BufferedStorageActor(maxBufferSize: Int, bufferIdleTime: FiniteDuration,
                            writeThrottle: FiniteDuration) extends Actor {
 
-  import java.nio.file.{OpenOption, Paths, StandardOpenOption}
+  import java.nio.file.Paths
 
   import BufferedStorageActor._
+  import PersistUtil._
   import WeatherStationActor._
   import context.{dispatcher, system}
 
   private val weatherCsv = Paths.get("weatherData.csv")
-  private val fileOpts = Set[OpenOption](StandardOpenOption.WRITE,
-    StandardOpenOption.APPEND, StandardOpenOption.CREATE)
   private val readingList = mutable.Set.empty[WeatherReading]
   private var persistSchedule = context.system.scheduler.scheduleOnce(bufferIdleTime, self, ScheduledPersistBuffer())
 
   private def persistBuffer2File(): Unit = {
     val source = Source(readingList.toSet)
-    val flow = Flow[WeatherReading].map(x => ByteString(f"${x.timestamp},${x.temperature}%.2f\n"))
     source.throttle(1, writeThrottle)
-      .via(flow)
+      .via(weatherFlow)
       .runWith(FileIO.toPath(weatherCsv, fileOpts))
     readingList.clear()
   }
@@ -64,5 +61,10 @@ class BufferedStorageActor(maxBufferSize: Int, bufferIdleTime: FiniteDuration,
       println(s"[${self.path.name}]: RECEIVED Instruction to persist 2 file due to idling buffer")
       persistBuffer2File()
       persistSchedule = context.system.scheduler.scheduleOnce(bufferIdleTime, self, ScheduledPersistBuffer())
+  }
+
+  override def unhandled(message: Any): Unit = {
+    println(s"[${self.path.name}]: UNHANDLED $message")
+    super.unhandled(message)
   }
 }
