@@ -25,10 +25,12 @@ class TemporaryAskActor(promise: Promise[Any], msg: Any, target: ActorRef,
       context.system.terminate()
     case msg: Any =>
       println(s"[${self.path.name}]: Received a response!")
-      if (sender != Actor.noSender) {
-        sender ! msg
-      }
-      promise.success("Asking yielded a response!")
+      //      // incorrect behaviour according to documentation, raises the question why the sender param is even needed?
+      //      if (sender != Actor.noSender) {
+      //        sender ! msg
+      //      }
+      //      promise.success("Asking yielded a response!")
+      promise.success(msg)
       context.system.terminate()
   }
 }
