@@ -34,11 +34,12 @@ class BufferedDistributedStorageActor(maxBufferSize: Int, bufferIdleTime: Finite
                                       writeThrottle: FiniteDuration) extends Actor {
 
   import BufferedStorageActor._
+  import PersistUtil.println
   import WeatherStationActor._
   import context.dispatcher
 
   private val workerCnt = Runtime.getRuntime.availableProcessors
-  private val readingList = mutable.Set.empty[WeatherReading]
+  private val readingList = mutable.SortedSet.empty[WeatherReading]
   private val workerRefs = new Array[ActorRef](workerCnt)
   private var nextWorkerId = 0
   private var persistSchedule = context.system.scheduler.scheduleOnce(bufferIdleTime, self, ScheduledPersistBuffer())
@@ -53,6 +54,7 @@ class BufferedDistributedStorageActor(maxBufferSize: Int, bufferIdleTime: Finite
 
   override def receive: Receive = {
     case msg: WeatherReading =>
+      println(s"[${self.path.name}]: RECEIVED WeatherReading ...")
       readingList += msg
       if (readingList.size > maxBufferSize) {
         println(s"[${self.path.name}]: SENDING message to self to persist data ...")

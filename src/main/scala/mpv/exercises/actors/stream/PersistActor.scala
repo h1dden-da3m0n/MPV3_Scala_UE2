@@ -4,13 +4,13 @@ import java.nio.file.Paths
 
 import akka.actor.Actor
 import akka.stream.scaladsl.{FileIO, Source}
-import mpv.exercises.actors.stream.PersistUtil.{fileOpts, weatherFlow}
 
 import scala.concurrent.duration.FiniteDuration
 
 class PersistActor(writeThrottle: FiniteDuration) extends Actor {
 
   import BufferedDistributedStorageActor._
+  import PersistUtil._
   import context.system
 
   private val weatherCsv = Paths.get("weatherData_23d.csv")

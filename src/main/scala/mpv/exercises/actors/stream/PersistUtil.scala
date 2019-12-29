@@ -17,4 +17,5 @@ object PersistUtil {
   def fileOpts: Set[OpenOption] = Set(StandardOpenOption.WRITE,
     StandardOpenOption.APPEND, StandardOpenOption.CREATE)
 
+  def println(x: Any): Unit = Console.println(s"$x (thread id=${Thread.currentThread.getId})")
 }

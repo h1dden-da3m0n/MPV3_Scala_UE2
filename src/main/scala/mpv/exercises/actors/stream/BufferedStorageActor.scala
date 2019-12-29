@@ -34,7 +34,7 @@ class BufferedStorageActor(maxBufferSize: Int, bufferIdleTime: FiniteDuration,
   import context.{dispatcher, system}
 
   private val weatherCsv = Paths.get("weatherData_23c.csv")
-  private val readingList = mutable.Set.empty[WeatherReading]
+  private val readingList = mutable.SortedSet.empty[WeatherReading]
   private var persistSchedule = context.system.scheduler.scheduleOnce(bufferIdleTime, self, ScheduledPersistBuffer())
 
   private def persistBuffer2File(): Unit = {
@@ -53,6 +53,7 @@ class BufferedStorageActor(maxBufferSize: Int, bufferIdleTime: FiniteDuration,
 
   override def receive: Receive = {
     case msg: WeatherReading =>
+      println(s"[${self.path.name}]: RECEIVED WeatherReading ...")
       readingList += msg
       if (readingList.size > maxBufferSize) {
         println(s"[${self.path.name}]: SENDING message to self to persist data ...")

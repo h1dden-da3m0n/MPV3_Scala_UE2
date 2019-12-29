@@ -27,6 +27,7 @@ class StorageActor(writeThrottle: FiniteDuration) extends Actor {
 
   override def receive: Receive = {
     case msg: WeatherReading =>
+      println(s"[${self.path.name}]: RECEIVED WeatherReading. Persisting it now ...")
       val source = Source.single(msg)
       if (writeThrottle > 0.millis) {
         source.throttle(1, writeThrottle)

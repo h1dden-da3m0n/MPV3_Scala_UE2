@@ -3,6 +3,7 @@ package mpv.exercises.actors.stream
 import java.time.LocalDateTime
 
 import akka.actor.{Actor, ActorRef, Props}
+import mpv.exercises.actors.stream.PersistUtil.println
 
 import scala.concurrent.duration._
 import scala.util.Random
@@ -15,7 +16,12 @@ object WeatherStationActor {
 
   case class WeatherProbe()
 
-  case class WeatherReading(timestamp: LocalDateTime, temperature: Double)
+  case class WeatherReading(timestamp: LocalDateTime, temperature: Double) extends Ordered[WeatherReading] {
+
+    import scala.math.Ordered.orderingToOrdered
+
+    def compare(that: WeatherReading): Int = this.timestamp compare that.timestamp
+  }
 
 }
 
