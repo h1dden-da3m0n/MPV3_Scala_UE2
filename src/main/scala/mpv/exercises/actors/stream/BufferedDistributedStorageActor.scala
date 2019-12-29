@@ -1,54 +1,54 @@
 package mpv.exercises.actors.stream
 
-import akka.actor.{Actor, Props}
-import akka.stream.scaladsl.{FileIO, Source}
+import akka.actor.{Actor, ActorRef, Props}
+import mpv.exercises.actors.stream.BufferedDistributedStorageActor.WorkOrder
 
 import scala.collection.mutable
 import scala.concurrent.duration._
 
-object BufferedStorageActor {
+
+object BufferedDistributedStorageActor {
+
+  import WeatherStationActor._
+
   def props(maxBufferSize: Int, bufferIdleTime: FiniteDuration, writeThrottle: FiniteDuration = 0.millis): Props =
-    Props(new BufferedStorageActor(maxBufferSize, bufferIdleTime, writeThrottle))
+    Props(new BufferedDistributedStorageActor(maxBufferSize, bufferIdleTime, writeThrottle))
 
   case class ScheduledPersistBuffer()
 
   case class PersistBuffer()
 
+  case class WorkOrder(readings: Seq[WeatherReading])
+
 }
 
 /**
- * BufferedStorageActor exercise 2.3 c)
+ * BufferedDistributedStorageActor exercise 2.3 d)
  *
  * @param maxBufferSize  the maximum size the buffer may reach before it gets persisted to a file
  * @param bufferIdleTime the maximum time the buffer hast to reach it max size before it gets persisted automatically
  * @param writeThrottle  the throttle time used on the Akka File IO stream
  */
-class BufferedStorageActor(maxBufferSize: Int, bufferIdleTime: FiniteDuration,
-                           writeThrottle: FiniteDuration) extends Actor {
 
-  import java.nio.file.Paths
+class BufferedDistributedStorageActor(maxBufferSize: Int, bufferIdleTime: FiniteDuration,
+                                      writeThrottle: FiniteDuration) extends Actor {
 
   import BufferedStorageActor._
-  import PersistUtil._
   import WeatherStationActor._
-  import context.{dispatcher, system}
+  import context.dispatcher
 
-  private val weatherCsv = Paths.get("weatherData_23c.csv")
+  private val workerCnt = Runtime.getRuntime.availableProcessors
   private val readingList = mutable.Set.empty[WeatherReading]
+  private val workerRefs = new Array[ActorRef](workerCnt)
+  private var nextWorkerId = 0
   private var persistSchedule = context.system.scheduler.scheduleOnce(bufferIdleTime, self, ScheduledPersistBuffer())
 
-  private def persistBuffer2File(): Unit = {
-    val source = Source(readingList.toSet)
-    if (writeThrottle > 0.millis) {
-      source.throttle(1, writeThrottle)
-        .via(weatherFlow)
-        .runWith(FileIO.toPath(weatherCsv, fileOpts))
+  createChildren()
+
+  private def createChildren(): Unit = {
+    for (i <- 0 until workerCnt) {
+      workerRefs(i) = context.actorOf(Props(classOf[PersistActor], writeThrottle), s"PersistActor_${i}")
     }
-    else {
-      source.via(weatherFlow)
-        .runWith(FileIO.toPath(weatherCsv, fileOpts))
-    }
-    readingList.clear()
   }
 
   override def receive: Receive = {
@@ -61,12 +61,19 @@ class BufferedStorageActor(maxBufferSize: Int, bufferIdleTime: FiniteDuration,
     case _: PersistBuffer =>
       persistSchedule.cancel()
       println(s"[${self.path.name}]: RECEIVED Instruction to persist 2 file due to buffer size")
-      persistBuffer2File()
+      sendWork2Worker()
       persistSchedule = context.system.scheduler.scheduleOnce(bufferIdleTime, self, ScheduledPersistBuffer())
     case _: ScheduledPersistBuffer =>
       println(s"[${self.path.name}]: RECEIVED Instruction to persist 2 file due to idling buffer")
-      persistBuffer2File()
+      sendWork2Worker()
       persistSchedule = context.system.scheduler.scheduleOnce(bufferIdleTime, self, ScheduledPersistBuffer())
+  }
+
+  private def sendWork2Worker(): Unit = {
+    println(s"[${self.path.name}]: SENDING WorkOrder to Worker $nextWorkerId ...")
+    workerRefs(nextWorkerId) ! WorkOrder(readingList.toSeq)
+    readingList.clear()
+    nextWorkerId = (nextWorkerId + 1) % workerCnt
   }
 
   override def unhandled(message: Any): Unit = {

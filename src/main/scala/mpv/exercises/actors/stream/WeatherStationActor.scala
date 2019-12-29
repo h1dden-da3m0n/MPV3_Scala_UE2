@@ -40,7 +40,7 @@ class WeatherStationActor(dataProcessor: ActorRef, readSpeed: FiniteDuration,
 
   override def receive: Receive = {
     case msg: WeatherProbe =>
-      println(s"[${self.path.name}]: PROBING #$probeCnt Reading weather data and transmitting to processor ...")
+      println(f"[${self.path.name}]: PROBING #$probeCnt%02d Reading weather data and transmitting to processor ...")
       dataProcessor ! WeatherReading(LocalDateTime.now(), Random.between(readRange._1, readRange._2))
       probeCnt += 1
   }
