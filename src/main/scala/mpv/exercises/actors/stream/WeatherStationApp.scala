@@ -24,11 +24,11 @@ object WeatherStationApp extends App {
 
   println("======== WeatherStationApp ========")
   println("---- Testing StorageActor 2.3b ----")
-  //test23(200.millis, StorageActor.props(), "StorageActor")
+  test23(200.millis, StorageActor.props(1.second), "StorageActor")
 
   println("---- Testing BufferedStorageActor 2.3c ----")
-  test23(200.millis, BufferedStorageActor.props(4, 2.2.seconds), "BufferedStorageActor")
+  test23(200.millis, BufferedStorageActor.props(4, 2.2.seconds, 1.second), "BufferedStorageActor")
 
   println("---- Testing BufferedDistributedStorageActor 2.3d ----")
-  //test23(200.millis, BufferedDistributedStorageActor.props(4, 2.2.second), "BufferedDistributedStorageActor")
+  test23(200.millis, BufferedDistributedStorageActor.props(4, 2.2.second, 1.second), "BufferedDistributedStorageActor")
 }
