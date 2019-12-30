@@ -49,7 +49,7 @@ object IOTStreams extends App {
                                    bulkSize: Int = 4): Flow[WeatherReading, ByteString, NotUsed] = {
     def weatherReadingMap(reading: WeatherReading): String = {
       println("Flow: MAPPING WeatherReading(s) 2 ByteString ...")
-      f"${reading.timestamp},${reading.temperature}%.2f"
+      f"${reading.timestamp},${reading.temperature}%.2f\n"
     }
 
     def buildList(list: Seq[WeatherReading], elem: WeatherReading): Seq[WeatherReading] = {
@@ -62,7 +62,7 @@ object IOTStreams extends App {
       }
         .throttle(1, throttle)
         .mapAsync(coreCnt)(readingSeq => Future {
-          ByteString(readingSeq.map(weatherReadingMap).mkString("\n"))
+          ByteString(readingSeq.map(weatherReadingMap).mkString(""))
         })
     }
     else {
@@ -70,7 +70,7 @@ object IOTStreams extends App {
         (readingSeq, reading) => buildList(readingSeq, reading)
       }
         .mapAsync(coreCnt)(readingSeq => Future {
-          ByteString(readingSeq.map(weatherReadingMap).mkString("\n"))
+          ByteString(readingSeq.map(weatherReadingMap).mkString(""))
         })
     }
   }
