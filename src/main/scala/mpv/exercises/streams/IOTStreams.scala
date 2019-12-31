@@ -88,9 +88,9 @@ object IOTStreams extends App {
 
   print("==== IOTAkkaStreams ====\n")
   testStream("Default Flow", "weatherData_24b.csv",
-    generateWeatherSource(250.millis, (12.0, 20.0)), generateWeatherFlow(1.second))
+    generateWeatherSource(200.millis, (12.0, 20.0)), generateWeatherFlow(1.second))
   testStream("Async Flow", "weatherData_24c.csv",
-    generateWeatherSource(250.millis, (12.0, 20.0)), generateBulkAsyncWeatherFlow(1.second))
+    generateWeatherSource(200.millis, (12.0, 20.0)), generateBulkAsyncWeatherFlow(1.second))
 
   Thread.sleep(200)
   system.terminate()
