@@ -19,8 +19,6 @@ object IOTStreams extends App {
 
   import system.dispatcher
 
-  private val coreCnt = Runtime.getRuntime.availableProcessors
-
   case class WeatherReading(timestamp: LocalDateTime, temperature: Double)
 
   def generateWeatherSource(readSpeed: FiniteDuration,
@@ -47,31 +45,31 @@ object IOTStreams extends App {
 
   def generateBulkAsyncWeatherFlow(throttle: FiniteDuration = 0.millis,
                                    bulkSize: Int = 4): Flow[WeatherReading, ByteString, NotUsed] = {
-    def weatherReadingMap(reading: WeatherReading): String = {
-      println("Flow: MAPPING WeatherReading(s) 2 ByteString ...")
-      f"${reading.timestamp},${reading.temperature}%.2f\n"
-    }
+    val coreCnt = Runtime.getRuntime.availableProcessors
 
     def buildList(list: Seq[WeatherReading], elem: WeatherReading): Seq[WeatherReading] = {
       list :+ elem
     }
 
-    if (throttle > 0.millis) {
-      Flow[WeatherReading].batch(bulkSize, buildList(Seq.empty[WeatherReading], _)) {
-        (readingSeq, reading) => buildList(readingSeq, reading)
+    def weatherReadingSeqMap(readingSeq: Seq[WeatherReading]): Future[ByteString] = {
+      Future {
+        println(s"Flow: MAPPING ${readingSeq.size} WeatherReading(s) 2 ByteString ...")
+        ByteString(readingSeq.map(weatherReading2String).mkString(""))
       }
+    }
+
+    def weatherReading2String(reading: WeatherReading): String = {
+      f"${reading.timestamp},${reading.temperature}%.2f\n"
+    }
+
+    if (throttle > 0.millis) {
+      Flow[WeatherReading].batch(bulkSize, buildList(Seq.empty[WeatherReading], _))(buildList)
         .throttle(1, throttle)
-        .mapAsync(coreCnt)(readingSeq => Future {
-          ByteString(readingSeq.map(weatherReadingMap).mkString(""))
-        })
+        .mapAsync(coreCnt)(weatherReadingSeqMap)
     }
     else {
-      Flow[WeatherReading].batch(bulkSize, buildList(Seq.empty[WeatherReading], _)) {
-        (readingSeq, reading) => buildList(readingSeq, reading)
-      }
-        .mapAsync(coreCnt)(readingSeq => Future {
-          ByteString(readingSeq.map(weatherReadingMap).mkString(""))
-        })
+      Flow[WeatherReading].batch(bulkSize, buildList(Seq.empty[WeatherReading], _))(buildList)
+        .mapAsync(coreCnt)(weatherReadingSeqMap)
     }
   }
 
@@ -81,7 +79,7 @@ object IOTStreams extends App {
     val weatherCsv = Paths.get(fileName)
     print(s"---- Testing $testName ----\n")
 
-    val f = source.limit(32).via(flow).runWith(FileIO.toPath(weatherCsv, fileOpts))
+    val f = source.limit(38).via(flow).runWith(FileIO.toPath(weatherCsv, fileOpts))
 
     Await.ready(f, Duration.Inf)
     Thread.sleep(50)
