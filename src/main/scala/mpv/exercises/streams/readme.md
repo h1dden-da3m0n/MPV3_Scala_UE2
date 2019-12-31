@@ -6,8 +6,8 @@ Exercise 2.4
 1. accomplished by several `println` statements that have been overloaded to also print out the thread id\
   **note:** the sink could not be extended with println as it get generated and managed by File IO
 2. Analysis of what happens if Generation Rate exceeds Persistence rate drastically (witnessed via log/print output)
-   21. The implementation using only `map` and not `mapAsync` actually gets backed up to the source with messages due to
-    backpressure, which means that the source is not pumping out more messages, even though it would be allowed to.
+   21. The implementation using only `map` and not `mapAsync` actually gets backed up to the source with messages due to 
+   backpressure, which means that the source is not pumping out more messages, even though it would be allowed to.
    22. The implementation using `mapAsync` with `batch` allows the stream to be more flexible and wont back up so much 
    as the first implementation, it makes good use of backpressure by collecting batches of elements and using up to `coreCnt`
    threads to map the collections to `ByteStrings` (for use with FileIO).
